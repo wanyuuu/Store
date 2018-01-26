@@ -1,0 +1,203 @@
+<html>
+<head>
+	<TITLE></TITLE>
+	<META content="text/html; charset=utf-8" http-equiv=Content-Type>
+	<script src="../js/jquery-3.1.1.min.js"></script>
+	<script src="../js/jquery.cookie-1.4.1.min.js"></script>
+	<script src="../js/top.js"></script>
+</head>
+<body>
+<div id="top"></div>
+
+<table border="0" width="100%" cellspacing="0" cellpadding="0">
+	<tr>
+		<td valign="top" width="5%" align="left">
+			<table align="left" bgcolor="#008800" border="0" cellspacing="2"
+				   cellpadding="2">
+				<tr>
+					<td bgcolor="#FFFF88">
+						<a href="main.html"><b><font color="BLACK" size="2">&lt;&lt; 主菜单</font>
+						</b></a>
+					</td>
+				</tr>
+			</table>
+		</td>
+		<td valign="top" align="center">
+			<h2 align="center">
+
+			</h2>
+
+
+				<table align="center" bgcolor="#008800" border="0" cellspacing="2"
+					   cellpadding="5" id="list">
+					<tr bgcolor="#cccccc" id="0">
+						<td>
+							项目编号
+						</td>
+						<td>
+							产品编号
+						</td>
+						<td>
+							产品描述
+						</td>
+						<td>
+							<b>项目描述</b>
+						</td>
+						<td width="100">
+							单价
+						</td>
+						<td>
+							数量
+						</td>
+						<td>
+							合计
+						</td>
+						<td>
+							操作
+						</td>
+					</tr>
+
+
+				</table>
+				<center>
+
+
+				</center>
+
+
+
+			<br />
+			<center>
+				<input type="image" src="../images/button_checkout.gif" id="commit">
+			</center>
+
+
+		</td>
+
+
+
+
+	</tr>
+</table>
+<script type="text/javascript">
+	function show(){
+		var url=location.href;
+		var n=url.lastIndexOf("?");
+		var l=url.substring(n+1,url.length);//取得？后面的串
+		var oid=l.split("=")[1];//取得oid的值
+		var CART_QUERY_URL="http://localhost:8080/cart/query/";
+		var username=$.cookie("pusername");
+		$.ajax({
+			url:CART_QUERY_URL+username+"/"+oid,
+			dataType:"JSON",
+			type:"GET",
+			statusCode:{
+				200:function (data) {
+					$("#list tr:not(:first)").remove();
+					var sum=0;
+					$(data).each(function (index) {
+						sum+=data[index].item.listprice*data[index].quantity;//总价
+						var i=$("#list>tbody>tr:last").attr('id');
+						i++;
+						var str="<tr bgcolor='#FFFF88' id='"+i+"'><td>"+data[index].item.itemid+"</td>"+
+								"<td>"+data[index].item.product.productid+"</td>"+
+										"<td>"+data[index].item.product.productid+"</td>"+
+										"<td>"+data[index].item.product.descn+data[index].item.attr1+"</td>"+
+										"<td>"+data[index].item.listprice+"</td>"+
+										"<td><input type='number' value='"+data[index].quantity+"' onblur='update(this,\""+data[index].item.itemid+"\","+data[index].orderid+")'></td>"+
+										"<td>"+data[index].item.listprice*data[index].quantity+"</td>"+
+										"<td><input type='image' src='../images/button_remove.gif' onclick='delCart(\""+data[index].item.itemid+"\","+data[index].orderid+")'></td>"+
+								"</tr>"
+						$("#list").append(str);
+					});
+					var str1="<tr bgcolor='#FFFF88'><td colspan='7'>总价:</td>" +
+							"<td><input type='hidden' id='orderid' value='"+oid+"'/>" +
+									"<span id='sum'>"+sum+"</span>"+
+							"</td>"+
+							"</tr>";
+					$("#list").append(str1);
+				}
+			}
+		})
+	};
+		$("#commit").click(function () {
+			var CART_COMMIT_URL="http://localhost:8080/cart/commit";
+			var username=$.cookie("pusername");
+			if(username==undefined){
+				window.location="login.html";
+				return ;
+			}
+			var json={
+				username:username,
+				orderid:$("#orderid").val(),
+				orderdate:new Date(),
+				totalprice:$("#sum").html()
+			}
+			$.ajax({
+				url:CART_COMMIT_URL,
+				data:JSON.stringify(json),
+				contentType:"application/json",
+				type:"PUT",
+				statusCode:{
+					200:function (data) {
+						window.location="main.html?username="+username;
+					}
+				}
+			})
+		});
+	function update(obj,itemid,orderid){
+		var CART_UP_URL="http://localhost:8080/cart/up";
+		var username=$.cookie("pusername");
+		if(username==undefined){
+			window.location="login.html";
+			return ;
+		}
+		var json={
+			username:username,
+			itemid:itemid,
+			orderid:orderid,
+			quantity:obj.value
+		};
+		$.ajax({
+			url:CART_UP_URL,
+			data:JSON.stringify(json),
+			contentType:"application/json",
+			type:"PUT",
+			dataType:"text",
+			statusCode:{
+				200:function (data) {
+					window.location="cart.html?oid="+orderid;
+				}
+			}
+		})
+	}
+	function delCart(itemid,orderid){
+		var CART_DEL_URL="http://localhost:8080/cart/del";
+		var username=$.cookie("pusername");
+		if(username==undefined){
+			window.location="login.html";
+			return ;
+		}
+		var json={
+			username:username,
+			orderid:orderid,
+			itemid:itemid
+		}
+		$.ajax({
+			url:CART_DEL_URL,
+			data:JSON.stringify(json),
+			contentType:"application/json",
+			dataType:"text",
+			type:"POST",
+			statusCode:{
+				200:function (data) {
+					show();
+				}
+			}
+		})
+	};
+	show();
+</script>
+<br>
+</body>
+</html>
